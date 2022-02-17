@@ -84,10 +84,43 @@ class LargestFirstAI(AI):
         return sorted(hand)[-1]
 
 class StreetSmartAI(AI):
-    """ Always pick the biggest street smart move
-        REDACTED
+    """ Always pick the smallest card on hand
     """
-    pass
+
+    def play(self, board: Board, hand: Set[int], seen: Set[int]) -> int:
+        blacklist = []
+        for lane in board.lanes:
+            if len(lane) == 5:
+                last = lane[-1]
+                for i in range(last+1, 45):
+                    if i in hand:
+                        blacklist.append(i)
+                    elif i not in seen:
+                        break
+            if len(lane) == 4:
+                last = lane[-1]
+                for i in range(last+2, 45):
+                    if i in hand:
+                        blacklist.append(i)
+                    elif i not in seen:
+                        break
+
+        max_lanes = sorted([x[-1] for x in board.lanes])
+        between = []
+        for idx, step in enumerate(max_lanes):
+            if idx == 0:
+                continue
+            between.append((max_lanes[idx-1], max_lanes[idx]))
+        for start, stop in between:
+            for i in range(start, stop):
+                if i in hand and i not in blacklist:
+                    return i
+        
+        for i in range(len(hand)//3, 2*len(hand)//3):
+            if hand[i] not in blacklist:
+                return hand[i]
+              
+        return sorted(hand)[0]
 
 class Player:
     def __init__(self, ai, board: Board, hand: List[int]) -> None:
