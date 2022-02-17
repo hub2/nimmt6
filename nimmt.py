@@ -1,6 +1,15 @@
 import random
 from typing import Set, List, Dict
 
+def get_score(card_number):
+    if card_number % 11 == 0:
+        return 5
+    elif card_number % 10 == 0:
+        return 3
+    elif card_number % 5 == 0:
+        return 2
+    else:
+        return 1
 
 class Board:
     """ 6nimmt game rules in a nutshell:
@@ -30,7 +39,7 @@ class Board:
                         best_lane = lane
             if best_lane is None:
                 take = player.pick_lane()
-                player.penalty += len(self.lanes[take])
+                player.penalty += sum([get_score(lane_card) for lane_card in self.lanes[take]])
                 self.lanes[take] = [card]
             else:
                 best_lane.append(card)
@@ -74,6 +83,11 @@ class LargestFirstAI(AI):
     def play(self, board: Board, hand: Set[int], seen: Set[int]) -> int:
         return sorted(hand)[-1]
 
+class StreetSmartAI(AI):
+    """ Always pick the biggest street smart move
+        REDACTED
+    """
+    pass
 
 class Player:
     def __init__(self, ai, board: Board, hand: List[int]) -> None:
@@ -102,7 +116,10 @@ def play(ais):
 
     board = Board(cards[-4:])
     players = [Player(ai, board, cards[i*10:(i+1)*10]) for i, ai in enumerate(ais)] 
-
+    
+    for p in players:
+        p.see([lane[0] for lane in board.lanes])
+        
     for turn in range(10):
         choices = {p: p.pop() for p in players}
         for p in players:
