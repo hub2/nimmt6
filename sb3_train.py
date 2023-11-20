@@ -24,4 +24,4 @@ register(
 vec_env = make_vec_env("nimmt_gym/NimmtEnv-v0", n_envs=16)
 model = PPO("MultiInputPolicy", vec_env, verbose=1)
 model.learn(total_timesteps=5000000)
-model.save("ppo_nimmt")
+model.save("ppo_nimmt_history")

@@ -21,8 +21,6 @@ class NimmtEnv(gym.Env):
         self.cards_in_game = 10 * players + self._num_rows + 1
         self.cards_space = self.cards_in_game
 
-        # Observations are dictionaries with the agent's and the target's location.
-        # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
         table_size = self._num_rows * self._max_row
         players_size = 10
         self.observation_space = spaces.Dict(
@@ -36,12 +34,17 @@ class NimmtEnv(gym.Env):
                     shape=(table_size,),
                     dtype=np.float64,
                 ),
+                "cards_gone": spaces.Box(
+                    low=-1.0,
+                    high=1.0,
+                    shape=(self.cards_in_game - 1,),
+                    dtype=np.float64,
+                ),
                 "cards_left": spaces.Discrete(11),
             }
         )
 
         self.action_space = spaces.Discrete(10)
-
         self.render_mode = render_mode
 
     def _get_obs(self):
@@ -58,6 +61,10 @@ class NimmtEnv(gym.Env):
                     for x in self.table
                 ]
             ).flatten(),
+            "cards_gone": np.array(
+                [self._normalize(x) for x in self.cards_gone]
+                + [normalized_empty] * (self.cards_in_game - 1 - len(self.cards_gone))
+            ),
             "cards_left": len(self.players[0]),
         }  # cards left in the game
 
@@ -74,9 +81,12 @@ class NimmtEnv(gym.Env):
         self.np_random.shuffle(self.deck)
         self.players = []
         self.players_scores = []
+        self.cards_gone = []
 
         for _ in range(self._num_rows):
-            self.table.append([self.deck.pop()])
+            card = self.deck.pop()
+            self.table.append([card])
+            self.cards_gone.append(card)
 
         for _ in range(self.players_count):
             self.players_scores.append(0)
@@ -95,6 +105,7 @@ class NimmtEnv(gym.Env):
 
     def _play(self, player, card, row_number):
         self.players[player].remove(card)
+        self.cards_gone.append(card)
         if len(self.table[row_number]) == 5 or card < self.table[row_number][-1]:
             self.players_scores[player] += sum(
                 [self._card_value(x) for x in self.table[row_number]]
@@ -150,7 +161,9 @@ class NimmtEnv(gym.Env):
 
         actions_to_be_played = sorted(list(enumerate(actions)), key=lambda x: x[0])
         for player, card in actions_to_be_played:
-            sorted_table = sorted(enumerate(self.table), key=lambda x: x[1][-1])
+            sorted_table = sorted(
+                enumerate(self.table), key=lambda x: x[1][-1], reverse=True
+            )
             for row_number, row in sorted_table:
                 # Card is higher than some row
                 if card > row[-1]:
